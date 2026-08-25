@@ -1,41 +1,45 @@
-def is_valid_input(data):
-    if data is None:
-        return False
-    if not isinstance(data, (str, int, float)):
-        return False
-    if isinstance(data, str):
-        stripped = data.strip()
-        if len(stripped) == 0:
-            return False
-        # Allow letters, numbers and spaces only
-        for char in stripped:
-            if not (char.isalnum() or char.isspace()):
-                return False
-    if isinstance(data, (int, float)):
-        if not (0 <= data <= 1000):
-            return False
-    return True
+import logging
+from logging.handlers import RotatingFileHandler
+import os
 
-def process_data(item):
-    if isinstance(item, str):
-        return item.strip().title()
-    return item * 2
+def setup_logger(name="automation_tool", log_file="logs/app.log", level=logging.INFO, max_bytes=5242880, backup_count=5):
+    """Setup logger with rotating file handler and console output."""
+    logger = logging.getLogger(name)
+    if logger.hasHandlers():
+        return logger
+    logger.setLevel(level)
+    # Create logs directory if it doesn't exist
+    log_dir = os.path.dirname(log_file)
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
+    # File handler with rotation
+    file_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=max_bytes,
+        backupCount=backup_count
+    )
+    file_handler.setLevel(level)
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level)
+    # Formatter
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    # Add handlers to logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    return logger
 
-def main():
-    # Sample data simulating inputs for the automation tool
-    inputs = [5, "hello world", -1, "test", 1500, "invalid@char", 42, "", None, "Valid123", 100]
-    results = []
-    # Main processing loop with input validation
-    for idx, item in enumerate(inputs):
-        print(f"Processing item {idx + 1}: {item}")
-        if not is_valid_input(item):
-            print("  -> Skipped: invalid input")
-            continue
-        processed = process_data(item)
-        results.append(processed)
-        print(f"  -> Result: {processed}")
-    print("\nAll results:", results)
-    return results
-
+# Example of using the logger
 if __name__ == "__main__":
-    main()
+    log = setup_logger()
+    log.debug("This is a debug message")
+    log.info("Logger setup complete")
+    log.warning("Sample warning")
+    log.error("Sample error message")
+    # Log multiple times to demonstrate
+    for i in range(20):
+        log.info(f"Test log entry {i + 1}")
