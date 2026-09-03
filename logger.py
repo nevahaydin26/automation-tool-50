@@ -1,58 +1,37 @@
 import logging
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
+import os
 
-def setup_logger(
-    name: str = "automation_tool_50",
-    log_file: str = "logs/automation.log",
-    level: int = logging.INFO,
-    max_bytes: int = 10 * 1024 * 1024,  # 10 MB
-    backup_count: int = 5,
-) -> logging.Logger:
-    """Configure and return a logger with rotating file handler.
+def setup_logger(log_file='app.log', max_bytes=1048576, backup_count=5):
+    """Sets up a rotating file logger and a stream logger."""
+    logger = logging.getLogger('automation_tool')
+    logger.setLevel(logging.INFO)
+    
+    if logger.hasHandlers():
+        return logger
 
-    Creates log directory if it does not exist.
-
-    Prevents duplicate handlers on repeated calls.
-    """
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-
-    # Ensure log directory exists
-    log_path = Path(log_file)
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Rotating file handler
-    file_handler = RotatingFileHandler(
-        log_file,
-        maxBytes=max_bytes,
-        backupCount=backup_count,
-        encoding="utf-8",
-    )
-    file_handler.setLevel(level)
-
-    # Console handler for output
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(level)
-
-    # Standard formatter
     formatter = logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+    log_dir = os.path.dirname(log_file)
+    if log_dir and not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    file_handler = RotatingFileHandler(
+        log_file, maxBytes=max_bytes, backupCount=backup_count
     )
     file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
+    file_handler.setLevel(logging.INFO)
+    logger.addHandler(file_handler)
 
-    # Add handlers only if not already present
-    if not logger.handlers:
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    console_handler.setLevel(logging.INFO)
+    logger.addHandler(console_handler)
 
     return logger
 
-# Quick test when run directly
-if __name__ == "__main__":
-    logger = setup_logger()
-    logger.debug("Debug message")
-    logger.info("Info message")
-    logger.warning("Warning message")
-    logger.error("Error message")
+if __name__ == '__main__':
+    log = setup_logger('logs/automation.log')
+    log.info('Logger initialized with rotating file handler')
