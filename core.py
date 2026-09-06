@@ -1,45 +1,31 @@
-import logging
-from logging.handlers import RotatingFileHandler
-import os
+import json
+from typing import Any, Dict, Optional
 
-def setup_logger(name="automation_tool", log_file="logs/app.log", level=logging.INFO, max_bytes=5242880, backup_count=5):
-    """Setup logger with rotating file handler and console output."""
-    logger = logging.getLogger(name)
-    if logger.hasHandlers():
-        return logger
-    logger.setLevel(level)
-    # Create logs directory if it doesn't exist
-    log_dir = os.path.dirname(log_file)
-    if log_dir:
-        os.makedirs(log_dir, exist_ok=True)
-    # File handler with rotation
-    file_handler = RotatingFileHandler(
-        log_file,
-        maxBytes=max_bytes,
-        backupCount=backup_count
-    )
-    file_handler.setLevel(level)
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(level)
-    # Formatter
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-    # Add handlers to logger
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-    return logger
+def clean_data(data: Any) -> Any:
+    """Recursively strips whitespace from string values in dictionary."""
+    if isinstance(data, dict):
+        return {k: clean_data(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [clean_data(item) for item in data]
+    elif isinstance(data, str):
+        return data.strip()
+    return data
 
-# Example of using the logger
-if __name__ == "__main__":
-    log = setup_logger()
-    log.debug("This is a debug message")
-    log.info("Logger setup complete")
-    log.warning("Sample warning")
-    log.error("Sample error message")
-    # Log multiple times to demonstrate
-    for i in range(20):
-        log.info(f"Test log entry {i + 1}")
+def load_json_file(file_path: str) -> Optional[Dict]:
+    """Safely loads and parses JSON configuration files."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return clean_data(data)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"Error loading {file_path}: {e}")
+        return None
+
+def validate_keys(data: Dict, required: list) -> bool:
+    """Checks if all required keys exist in dictionary."""
+    return all(key in data for key in required)
+
+if __name__ == '__main__':
+    # Example usage for testing structure
+    test_input = {"name": "  dev  ", "settings": ["  on  ", "  auto  "]}
+    print(clean_data(test_input))
