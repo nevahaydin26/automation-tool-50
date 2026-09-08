@@ -1,42 +1,27 @@
 import re
+from typing import Any, Optional
 
-def validate_input(data):
-    """
-    Validates input structure and format for automation-tool-50.
-    Returns (bool, str) tuple representing status and error message.
-    """
-    if not isinstance(data, dict):
-        return False, "Input must be a dictionary"
+def validate_email(email: str) -> bool:
+    """Verify email address format using regex."""
+    pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    return bool(re.match(pattern, email))
 
-    required_fields = ['task_id', 'payload']
-    for field in required_fields:
-        if field not in data:
-            return False, f"Missing required field: {field}"
+def validate_numeric(value: Any, min_val: Optional[int] = None, max_val: Optional[int] = None) -> bool:
+    """Check if value is numeric and within optional range."""
+    if not isinstance(value, (int, float)):
+        return False
+    if min_val is not None and value < min_val:
+        return False
+    if max_val is not None and value > max_val:
+        return False
+    return True
 
-    if not isinstance(data['task_id'], int):
-        return False, "task_id must be an integer"
+def validate_non_empty_string(value: Any) -> bool:
+    """Ensure input is a string and not blank."""
+    return isinstance(value, str) and len(value.strip()) > 0
 
-    # Validate payload format using regex
-    if not re.match(r'^[a-zA-Z0-9_-]+$', str(data['payload'])):
-        return False, "payload contains invalid characters"
-
-    return True, "success"
-
-def process_loop(items):
-    """
-    Main processing loop with integrated input validation.
-    """
-    for item in items:
-        is_valid, error = validate_input(item)
-        if not is_valid:
-            print(f"Validation failed for item: {error}")
-            continue
-        
-        print(f"Processing task: {item['task_id']}")
-
-if __name__ == "__main__":
-    mock_data = [
-        {'task_id': 1, 'payload': 'data_01'},
-        {'task_id': 'invalid', 'payload': 'bad'}
-    ]
-    process_loop(mock_data)
+def sanitize_input(value: str) -> str:
+    """Strip whitespace and prevent common injection artifacts."""
+    if not isinstance(value, str):
+        return ""
+    return value.strip().replace(';', '').replace('--', '')
