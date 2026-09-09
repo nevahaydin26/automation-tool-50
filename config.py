@@ -2,47 +2,39 @@ import json
 import os
 from typing import Any, Dict
 
-DEFAULT_CONFIG: Dict[str, Any] = {
-    "app_name": "automation-tool-50",
-    "debug": False,
-    "max_workers": 4,
+DEFAULT_CONFIG = {
     "timeout": 30,
+    "retries": 3,
     "log_level": "INFO",
-    "output_dir": "./output",
+    "enabled": True
 }
 
-
-def load_config(config_path: str = None) -> Dict[str, Any]:
-    """Load configuration from a JSON file, overriding default values."""
+def load_config(config_path: str = "config.json") -> Dict[str, Any]:
+    """
+    Loads configuration from a JSON file with fallbacks.
+    """
     config = DEFAULT_CONFIG.copy()
 
-    if config_path and os.path.exists(config_path):
+    if os.path.exists(config_path):
         try:
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(config_path, "r") as f:
                 user_config = json.load(f)
-                if isinstance(user_config, dict):
-                    config.update(user_config)
-        except (json.JSONDecodeError, OSError) as err:
-            print(f"Warning: Failed to load {config_path}: {err}")
-
-    # Allow environment variable overrides (APP_KEY format)
-    for key in config:
-        env_var = f"APP_{key.upper()}"
-        if env_var in os.environ:
-            raw_val = os.environ[env_var]
-            if isinstance(config[key], bool):
-                config[key] = raw_val.lower() in ("true", "1", "yes")
-            elif isinstance(config[key], int):
-                try:
-                    config[key] = int(raw_val)
-                except ValueError:
-                    pass
-            else:
-                config[key] = raw_val
-
+                config.update(user_config)
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Warning: Could not read config {config_path}: {e}")
+            
     return config
 
+def save_config(config: Dict[str, Any], config_path: str = "config.json") -> None:
+    """
+    Persists the current configuration to a JSON file.
+    """
+    try:
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=4)
+    except IOError as e:
+        print(f"Error: Could not save config to {config_path}: {e}")
 
-def get_config_value(config: Dict[str, Any], key: str, default: Any = None) -> Any:
-    """Safely retrieve configuration keys with fallback defaults."""
-    return config.get(key, default)
+if __name__ == "__main__":
+    current_config = load_config()
+    print(f"Loaded configuration: {current_config}")
