@@ -1,33 +1,32 @@
 import logging
+from logging.handlers import RotatingFileHandler
 import os
-import sys
 
-def get_logger(name: str):
-    """Configures and returns a logger instance with error handling."""
+def setup_logger(name: str, log_file: str = 'automation.log', level: int = logging.INFO):
+    """
+    Configures a rotating file logger for the automation tool.
+    """
     logger = logging.getLogger(name)
-    if not logger.handlers:
-        try:
-            log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
-            logger.setLevel(log_level)
-            
-            handler = logging.StreamHandler(sys.stdout)
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
-        except (ValueError, OSError) as e:
-            # Fallback to stderr if stream configuration fails
-            sys.stderr.write(f"Logging initialization failure: {e}\n")
-            logging.basicConfig(level=logging.ERROR)
-    return logger
+    logger.setLevel(level)
 
-def safe_log(logger, message: str, level: str = 'info'):
-    """Utility to log messages with structural edge case handling."""
-    try:
-        if not isinstance(message, str):
-            message = str(message)
-        
-        log_func = getattr(logger, level.lower(), logger.info)
-        log_func(message)
-    except Exception as e:
-        # Prevents logging failures from crashing the main automation flow
-        sys.stderr.write(f"Critical logging failure: {e}\n")
+    # Prevent duplicate handlers if setup is called multiple times
+    if not logger.handlers:
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+
+        # 5MB per file, keep 3 backups
+        file_handler = RotatingFileHandler(
+            log_file, 
+            maxBytes=5*1024*1024, 
+            backupCount=3
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+        # Optional: Add console output
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+
+    return logger
