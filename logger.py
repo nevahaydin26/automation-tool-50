@@ -1,32 +1,34 @@
 import logging
-from logging.handlers import RotatingFileHandler
+import sys
 import os
 
-def setup_logger(name: str, log_file: str = 'automation.log', level: int = logging.INFO):
-    """
-    Configures a rotating file logger for the automation tool.
-    """
+def setup_logger(name: str, log_file: str = 'automation.log'):
+    """Configures a robust logger with file rotation handling."""
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(logging.INFO)
 
-    # Prevent duplicate handlers if setup is called multiple times
-    if not logger.handlers:
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-        # 5MB per file, keep 3 backups
-        file_handler = RotatingFileHandler(
-            log_file, 
-            maxBytes=5*1024*1024, 
-            backupCount=3
-        )
+    try:
+        # Ensure log directory exists
+        log_dir = os.path.dirname(log_file)
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+            
+        file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
+    except (PermissionError, OSError) as e:
+        # Fallback to stderr if file system is inaccessible
+        stream_handler = logging.StreamHandler(sys.stderr)
+        stream_handler.setFormatter(formatter)
+        logger.addHandler(stream_handler)
+        logger.error(f"failed to initialize log file: {e}. falling back to stderr.")
 
-        # Optional: Add console output
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+    # Prevent duplicate handlers on re-initialization
+    if not logger.handlers:
+        console = logging.StreamHandler()
+        console.setFormatter(formatter)
+        logger.addHandler(console)
 
     return logger
