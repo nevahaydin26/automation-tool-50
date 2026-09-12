@@ -1,36 +1,34 @@
 class AutomationError(Exception):
-    """Base exception for all automation-tool-50 errors."""
-    pass
+    """Base exception class for the automation tool."""
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
 
-class ConfigurationError(AutomationError):
-    """Raised when configuration validation fails."""
-    pass
 
-class ExecutionError(AutomationError):
-    """Raised when a process fails during execution."""
-    pass
+class ValidationError(AutomationError):
+    """Raised when input validation fails in the processing loop."""
+    def __init__(self, message: str, field: str = None, value: str = None):
+        super().__init__(message)
+        self.field = field
+        self.value = value
 
-class TimeoutError(AutomationError):
-    """Raised when an operation exceeds time limits."""
-    pass
+    def __str__(self) -> str:
+        if self.field:
+            return f"Validation failed for field '{self.field}' [value: {self.value}]: {self.message}"
+        return f"Validation failed: {self.message}"
 
-def raise_if_none(value, message="Value cannot be None"):
-    """Helper to enforce non-null values."""
-    if value is None:
-        raise ValueError(message)
-    return value
 
-def validate_path(path):
-    """Helper to ensure file paths are provided."""
-    if not path or not isinstance(path, str):
-        raise ConfigurationError(f"Invalid path provided: {path}")
-    return path
+class MissingRequiredFieldError(ValidationError):
+    """Raised when a required config or input field is missing."""
+    def __init__(self, field: str):
+        super().__init__("Field is required but was not found.", field=field)
 
-def handle_execution_error(func):
-    """Decorator for wrapping operations with custom error handling."""
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            raise ExecutionError(f"Operation failed: {str(e)}") from e
-    return wrapper
+
+class InvalidFormatError(ValidationError):
+    """Raised when an input field value does not match the required format."""
+    def __init__(self, field: str, value: str, expected: str):
+        super().__init__(
+            f"Expected format: {expected}",
+            field=field,
+            value=value
+        )
